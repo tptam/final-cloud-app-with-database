@@ -103,19 +103,6 @@ def enroll(request, course_id):
     return HttpResponseRedirect(reverse(viewname='onlinecourse:course_details', args=(course.id,)))
 
 
-# <HINT> Create a submit view to create an exam submission record for a course enrollment,
-def submit(request, course_id):
-    user = request.user
-    course = get_object_or_404(Course, pk=course_id)
-    enrollment = Enrollment.objects.get(user=user, course=course)
-    submission = Submission.objects.create(enrollment=enrollment)
-    choices = extract_answer(request)
-    submission.choices.set(choices)
-    submission_id = submission.id
-    return HttpResponseRedirect(reverse(viewname='onlinecourse:exam_result', args=(course_id, submission_id)))
-
-
-
 # An example method to collect the selected choices from the exam form from the request object
 def extract_answers(request):
    submitted_anwsers = []
@@ -127,18 +114,30 @@ def extract_answers(request):
    return submitted_anwsers
 
 
+# <HINT> Create a submit view to create an exam submission record for a course enrollment,
+def submit(request, course_id):
+    user = request.user
+    course = get_object_or_404(Course, pk=course_id)
+    enrollment = Enrollment.objects.get(user=user, course=course)
+    submission = Submission.objects.create(enrollment=enrollment)
+    choices = extract_answers(request)
+    submission.choices.set(choices)
+    submission_id = submission.id
+    return HttpResponseRedirect(reverse(viewname='onlinecourse:exam_result', args=(course_id, submission_id)))
+
+
 # <HINT> Create an exam result view to check if learner passed exam and show their question results and result for each question,
 def show_exam_result(request, course_id, submission_id):
     course = get_object_or_404(Course, pk=course_id)
     submission = get_object_or_404(Submission, pk=submission_id)
-    choices = submission.choices
+    choices = submission.choices.all()
     score = 0
     for choice in choices:
         if choice.is_correct:
             score += choice.question.grade
     context = {
-        "course": course
-        "choices": choices
+        "course": course,
+        "choices": choices,
         "grade": score
     }
     return render(request, "onlinecourse/exam_result_bootstrap.html", context=context)
